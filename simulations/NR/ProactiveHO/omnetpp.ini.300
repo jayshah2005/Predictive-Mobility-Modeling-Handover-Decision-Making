@@ -26,8 +26,8 @@ sim-time-limit = 100s
 **.sctp.**.vector-recording = false
 **.routingRecorder.enabled = false
 
+seed-set = ${300}
 repeat = 5
-seed-set = ${100, 200, 300, 400, 500, 600, 700, 800, 900, 1000}
 #seed-set = ${10}
 
 *.playgroundSizeX = 2000m
