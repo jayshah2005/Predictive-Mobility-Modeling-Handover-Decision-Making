@@ -1,5 +1,4 @@
 import numpy as np
-import matplotlib.pyplot as plt
 import pandas as pd
 import sys
 import os
@@ -20,38 +19,72 @@ simulator_data_path = os.path.join(datafiles_dir, 'simulator_data.csv')
 # Note: dataStorage.csv cannot be used as fallback because it lacks X,Y coordinate columns [5,6]
 dataset = pd.read_csv(simulator_data_path)
 
-pred_1 = [0,0];
-vehicle_data = dataset.loc[dataset["vehicleId"].values  == int(vehicleId)]
-# print(vehicle_data)
-if len(vehicle_data) != 0:
-    
-    TimeStamp_Column = vehicle_data.iloc[ -150:, [0]].values # features set
-    X_Y_Coord = vehicle_data.iloc[ -150:, [5,6]].values
+HISTORY_LEN = int(os.getenv("SVR_HISTORY_LEN", "5"))
+MIN_SAMPLES = HISTORY_LEN + 1
 
+pred_1 = [0, 0]
+vehicle_data = dataset.loc[dataset["vehicleId"].values == int(vehicleId)]
 
+def build_history_features(df, history_len):
+    if df.empty:
+        return None
+
+    history = df.tail(history_len)
+    history_len = len(history)
+
+    times = history['Time'].values
+    xs = history['X'].values
+    ys = history['Y'].values
+
+    deltas_t = np.diff(times, prepend=times[0])
+    deltas_x = np.diff(xs, prepend=xs[0])
+    deltas_y = np.diff(ys, prepend=ys[0])
+
+    feature_vector = np.concatenate([
+        times,
+        xs,
+        ys,
+        deltas_t,
+        deltas_x,
+        deltas_y
+    ])
+
+    return feature_vector.reshape(1, -1)
+
+if len(vehicle_data) >= MIN_SAMPLES:
     from sklearn.preprocessing import StandardScaler
     from sklearn.multioutput import MultiOutputRegressor
     from sklearn.svm import SVR
 
+    history_vectors = []
+    targets = []
 
-    svrRegressor = SVR(kernel = 'rbf')
+    for start in range(len(vehicle_data) - HISTORY_LEN):
+        window = vehicle_data.iloc[start:start + HISTORY_LEN]
+        feature_vec = build_history_features(window, HISTORY_LEN)
+        if feature_vec is None:
+            continue
+        history_vectors.append(feature_vec[0])
+        targets.append(vehicle_data.iloc[start + HISTORY_LEN][['X', 'Y']].values)
 
-    multiOutReg = MultiOutputRegressor(svrRegressor)
-    multiOutReg.fit(TimeStamp_Column, X_Y_Coord)
+    if history_vectors:
+        history_matrix = np.vstack(history_vectors)
+        targets_matrix = np.vstack(targets)
 
+        scaler = StandardScaler()
+        history_scaled = scaler.fit_transform(history_matrix)
 
-    pred_1 = multiOutReg.predict([[predict_At]])
+        svrRegressor = SVR(kernel='rbf')
+        multiOutReg = MultiOutputRegressor(svrRegressor)
+        multiOutReg.fit(history_scaled, targets_matrix)
 
-    # Write output to outputSVR.txt in the same directory as this script
-    output_path = os.path.join(script_dir, 'outputSVR.txt')
-    # ORIGINAL: with open('/home/shajib/Simulation/Myversion2/WorkFolder/simu5G/src/stack/phy/layer/outputSVR.txt', 'w+') as f:
-    with open(output_path, 'w+') as f:
-        f.write('%s %s \n ' % (pred_1[0][0] ,pred_1[0][1]))
-else :
-    # Write output to outputSVR.txt in the same directory as this script
-    output_path = os.path.join(script_dir, 'outputSVR.txt')
-    # ORIGINAL: with open('/home/shajib/Simulation/Myversion2/WorkFolder/simu5G/src/stack/phy/layer/outputSVR.txt', 'w+') as f:
-    with open(output_path, 'w+') as f:
-        f.write('%s %s \n ' % (0 ,0))
+        latest_window = vehicle_data.iloc[-HISTORY_LEN:]
+        future_features = build_history_features(latest_window, HISTORY_LEN)
+        if future_features is not None:
+            future_features[0][HISTORY_LEN - 1] = float(predict_At)
+            future_scaled = scaler.transform(future_features)
+            pred_1 = multiOutReg.predict(future_scaled)
 
-# print(pred_1)
+output_path = os.path.join(script_dir, 'outputSVR.txt')
+with open(output_path, 'w+') as f:
+    f.write('%s %s \n ' % (pred_1[0][0], pred_1[0][1]))
