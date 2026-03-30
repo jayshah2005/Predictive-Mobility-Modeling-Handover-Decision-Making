@@ -243,39 +243,19 @@ Time,vehicleId,TowerID,RSSI,Distance,X,Y
 ```
 
 **Columns Required**:
-- **Col 0**: Timestamp (feature for training)
-- **Cols 5,6**: Vehicle X,Y coordinates (targets)
-- **Named column "vehicleId"**: Vehicle filter
+- `Time` (chronological ordering and delta computation)
+- `X`, `Y` (absolute UE coordinates used both as history context and prediction targets)
+- `vehicleId` (row filter so each SVR instance trains per vehicle)
 
 ### Processing Logic
 
-1. **Load Data**
-   ```python
-   dataset = pd.read_csv(simulator_data_path)
-   ```
-
-2. **Filter Vehicle**
-   ```python
-   vehicle_data = dataset.loc[dataset["vehicleId"].values == int(vehicleId)]
-   ```
-
-3. **Extract Features & Targets**
-   ```python
-   TimeStamp_Column = vehicle_data.iloc[-150:, [0]].values    # Features
-   X_Y_Coord = vehicle_data.iloc[-150:, [5,6]].values         # Targets
-   ```
-
-4. **Train SVR Model**
-   ```python
-   svrRegressor = SVR(kernel='rbf')
-   multiOutReg = MultiOutputRegressor(svrRegressor)
-   multiOutReg.fit(TimeStamp_Column, X_Y_Coord)
-   ```
-
-5. **Predict Position**
-   ```python
-   pred_1 = multiOutReg.predict([[predict_At]])
-   ```
+1. **Load & Filter**: Read `simulator_data.csv`, then slice rows where `vehicleId == <UE>`.
+2. **History Guard**: Require at least `HISTORY_LEN + 1` samples (default `HISTORY_LEN = 5`, configurable via the `SVR_HISTORY_LEN` environment variable). Until that threshold is met the script outputs `0 0`, so the C++ layer falls back to instantaneous distance.
+3. **Feature Construction**:
+   - Slide a window of `HISTORY_LEN` rows across `vehicle_data`.
+   - For each window, flatten the last `HISTORY_LEN` `(Time, X, Y)` triples and append their first-order differences `(Δt, Δx, Δy)` computed directly from those rows. This captures both position and instantaneous velocity without introducing new logged metrics.
+4. **Training**: Stack all window vectors into a matrix, scale with `StandardScaler`, and fit `MultiOutputRegressor(SVR(kernel='rbf'))` to predict the next `(X, Y)` sample following each window.
+5. **Inference**: Take the most recent `HISTORY_LEN` rows, build the same feature vector, replace the final time entry with `predict_At` (future horizon), scale, and run `predict()` to obtain the next `(X, Y)` estimate.
 
 ### Output Data
 
@@ -286,10 +266,9 @@ Time,vehicleId,TowerID,RSSI,Distance,X,Y
 1010.45 2005.20
 ```
 
-**Fallback** (no data):
-```
-0 0
-```
+**Fallbacks**:
+- **Insufficient history** (`len(vehicle_data) < HISTORY_LEN + 1`): script writes `0 0` so `LtePhyUe` reuses the instantaneous distance from `dist.txt`.
+- **No rows for vehicle**: same `0 0` output.
 
 **Parsing** [LtePhyUe.cc#L481-L488](src/stack/phy/layer/LtePhyUe.cc#L481-L488):
 ```cpp
