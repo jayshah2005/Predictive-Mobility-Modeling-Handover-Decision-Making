@@ -27,10 +27,7 @@ def load_and_group(path):
     t_value = st.t.ppf(0.975, df=n-1)
 
     margin = t_value * std_err
-
-    ci_lower = mean - margin
-    ci_upper = mean + margin
-
+    
     print(mean, margin)
 
     return mean, margin
@@ -99,10 +96,10 @@ metrics = ["Num_HO", "Failed_HO", "PingPong_HO", "Time_HO", "Frame_Loss"]
 for metric in metrics:
     plt.figure()
     plt.errorbar(densities, base_mean[metric], yerr=base_std[metric], label="GCN+LSTM")
-    plt.errorbar(densities, full_mean[metric], yerr=full_std[metric], label="GCN+LSTM+SVM")
+    plt.errorbar(densities, full_mean[metric], yerr=full_std[metric], label="GCN+LSTM+SVR")
 
     # plt.plot(densities, base_mean[metric], marker='o', label="GCN+LSTM")
-    # plt.plot(densities, full_mean[metric], marker='s', label="GCN+LSTM+SVM")
+    # plt.plot(densities, full_mean[metric], marker='s', label="GCN+LSTM+SVR")
 
     plt.title(metric)
     plt.xlabel("Density")
