@@ -17,11 +17,11 @@ source setenv
 
 cd \$HOME/Downloads/Predictive-Mobility-Modeling-Handover-Decision-Making/Project_GCN_LSTM_HO/simu5G/simulations/NR/ProactiveHO
 
-# Only run for seed 500
+# Only run for seed 100
 for i in {0..4}; do
-    echo \"  Run \$i / 5 for r=\$r\"
+    echo \"  Run \$i / 5 for r=100\"
     start=\$(date +%s)
-    opp_run -r \$i -m -u Cmdenv -c Vehicle-Uplink-Vehicle-Sender -n ../../../emulation:../..:../../../src:../../../../veins_inet/src/veins_inet:../../../../veins_inet/examples/veins_inet:../../../../inet4.4/examples:../../../../inet4.4/showcases:../../../../inet4.4/src:../../../../inet4.4/tests/validation:../../../../inet4.4/tests/networks:../../../../inet4.4/tutorials:../../../../veins-veins-5.2/examples/veins:../../../../veins-veins-5.2/src/veins --image-path=../../../images:../../../../veins_inet/images:../../../../inet4.4/images:../../../../veins-veins-5.2/images -l ../../../src/simu5g -l ../../../../veins_inet/src/veins_inet -l ../../../../inet4.4/src/INET -l ../../../../veins-veins-5.2/src/veins omnetpp.ini.500
+    opp_run -r \$i -m -u Cmdenv -c Vehicle-Uplink-Vehicle-Sender -n ../../../emulation:../..:../../../src:../../../../veins_inet/src/veins_inet:../../../../veins_inet/examples/veins_inet:../../../../inet4.4/examples:../../../../inet4.4/showcases:../../../../inet4.4/src:../../../../inet4.4/tests/validation:../../../../inet4.4/tests/networks:../../../../inet4.4/tutorials:../../../../veins-veins-5.2/examples/veins:../../../../veins-veins-5.2/src/veins --image-path=../../../images:../../../../veins_inet/images:../../../../inet4.4/images:../../../../veins-veins-5.2/images -l ../../../src/simu5g -l ../../../../veins_inet/src/veins_inet -l ../../../../inet4.4/src/INET -l ../../../../veins-veins-5.2/src/veins omnetpp.ini.100
     status=\$?
     finish=\$(date +%s)
     duration=\$((finish - start))
