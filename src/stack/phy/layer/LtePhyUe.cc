@@ -561,34 +561,34 @@ void LtePhyUe::handoverHandler(LteAirFrame* frame, UserControlInfo* lteInfo)
     else category = "SPEED_160PLUS";
 
     //distance
-    // ORIGINAL CODE: Manually reading distance from file
-    // dist = getDoubleValueFile(filePath_LtePhyUe+"dist.txt");
+    ORIGINAL CODE: Manually reading distance from file
+    dist = getDoubleValueFile(filePath_LtePhyUe+"dist.txt");
     
     // NEW CODE: Using SVMRegression.py to predict distance
     // Run SVR prediction every 15 simulation time units (as per documentation)
-    int after_5SimTime = ((int)simTime().dbl() + 5);
-    if ((simTime().dbl() >= 15) && ((int)simTime().dbl() % 15 == 0) && (nodeId_ != lastSVRVehicleId || (int)simTime().dbl() != lastSVRSimTime)) {
-        runSVR(nodeId_, after_5SimTime);
-        lastSVRSimTime = (int)simTime().dbl();
-        lastSVRVehicleId = nodeId_;
+    // int after_5SimTime = ((int)simTime().dbl() + 5);
+    // if ((simTime().dbl() >= 15) && ((int)simTime().dbl() % 15 == 0) && (nodeId_ != lastSVRVehicleId || (int)simTime().dbl() != lastSVRSimTime)) {
+    //     runSVR(nodeId_, after_5SimTime);
+    //     lastSVRSimTime = (int)simTime().dbl();
+    //     lastSVRVehicleId = nodeId_;
         
-        // Read predicted coordinates from outputSVR.txt
-        std::pair<double, double> predVehicleCoordSVR = getParfromFileForSVR(filePath_LtePhyUe + "python_script/outputSVR.txt");
-        predXCoordVehicle = predVehicleCoordSVR.first;
-        predYCoordVehicle = predVehicleCoordSVR.second;
-    }
+    //     // Read predicted coordinates from outputSVR.txt
+    //     std::pair<double, double> predVehicleCoordSVR = getParfromFileForSVR(filePath_LtePhyUe + "python_script/outputSVR.txt");
+    //     predXCoordVehicle = predVehicleCoordSVR.first;
+    //     predYCoordVehicle = predVehicleCoordSVR.second;
+    // }
     
     // Calculate predicted distance from predicted vehicle position to tower position
     // If both coordinates are 0, it means no prediction was available (SVMRegression.py returns 0,0 when no data found)
-    if (predXCoordVehicle != 0.0 || predYCoordVehicle != 0.0) {
-        inet::Coord towerCoord = lteInfo->getCoord();
-        predictedDistSVR = calculatePredictedDistance(predXCoordVehicle, predYCoordVehicle, towerCoord);
-        // Use predicted distance for handover decision
-        dist = predictedDistSVR;
-    } else {
-        // Fallback to original method if prediction not available (both coordinates are 0)
-        dist = getDoubleValueFile(filePath_LtePhyUe+"dist.txt");
-    }
+    // if (predXCoordVehicle != 0.0 || predYCoordVehicle != 0.0) {
+    //     inet::Coord towerCoord = lteInfo->getCoord();
+    //     predictedDistSVR = calculatePredictedDistance(predXCoordVehicle, predYCoordVehicle, towerCoord);
+    //     // Use predicted distance for handover decision
+    //     dist = predictedDistSVR;
+    // } else {
+    //     // Fallback to original method if prediction not available (both coordinates are 0)
+    //     dist = getDoubleValueFile(filePath_LtePhyUe+"dist.txt");
+    // }
 
     //plr
     plrHO_LtePhyUe = getDoubleValueFile(filePath_LtePhyUe+"plrHO.txt");
